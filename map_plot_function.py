@@ -1,6 +1,7 @@
 import pynmea2
 import numpy as np
 import folium
+import sys
 
 # Dash
 import dash
@@ -8,6 +9,27 @@ from dash import dcc, html
 import os
 from dash.dependencies import Input, Output, State
 
+def get_init_gps_position(gps_data_path):
+    # TODO: Check folders, return serial0/1 to correct path and read gps pos
+    GPS_serial_data = open(gps_data_path, "rt")
+
+    GPGGA_stored = 0
+    for line in reversed(list(GPS_serial_data)):
+
+        if 'GPGGA' in line.rstrip():
+            msg2 = pynmea2.parse(line.split('$')[1])
+            base_lat = np.radians(msg2.latitude)  # Boat latitude
+            base_long = np.radians(msg2.longitude)  # Boat longitude
+            GPGGA_stored = 1
+
+        if 'GPHDT' in line.rstrip():
+            msg3 = pynmea2.parse(line.split('$')[1])
+            radar_bearing_from_north = float(msg3.data[0]) * np.pi / (180)  # Radarns bäring mot norr
+
+            if GPGGA_stored == 1:
+                break
+
+    return base_lat, base_long, radar_bearing_from_north
 
 def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long):
 
@@ -111,9 +133,13 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
         return False, None, None, None, None
 
 
-init_zoom = 14
-base_lat, base_long = (1.0061238452447892, 0.20680522662164277)
-interval_time = 10 * 1000  # milliseconds
+gps_data_path = r"/home/pi/sigray/logs/gps"
+base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
+init_zoom = 13
+interval_time = 1 * 1000  # milliseconds
+
+radar_data_path = r"/home/pi/sigray/logs/radar"
+#output_dir = r"C:\Projects\sigray\logs\logs_20230512\logs"
 
 nauticalMiles2meters = 1852 / 1000
 earth_radius = 3440.1  # Radius of Earth
@@ -122,7 +148,6 @@ m, _ = create_map_object(init_zoom, base_lat, base_long)
 
 # Create a Dash app
 app = dash.Dash(__name__)
-
 # Run the app
 app.layout = html.Div([
     html.Iframe(id='map', srcDoc=m._repr_html_(), width='100%', height='1000'),
@@ -135,7 +160,6 @@ app.layout = html.Div([
     )
 ])
 
-
 # Define a callback function to update the map
 @app.callback(Output("map", "srcDoc"),
               Output('stored_targets_prev', 'data'),
@@ -145,8 +169,9 @@ app.layout = html.Div([
               State('stored_targets_hist', 'data'))
 def update_map(n, old_targets, hist_targets):
     # Add new markers to the Folium map object
+    print("Enter")
     new_m, _ = create_map_object(init_zoom, base_lat, base_long)
-    targets = get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long)
+    targets = get_data(radar_data_path, nauticalMiles2meters, earth_radius, base_lat, base_long)
 
     # New targets
     for target in targets:
@@ -205,5 +230,5 @@ def update_map(n, old_targets, hist_targets):
 
 # Run the app
 if __name__ == '__main__':
-    output_dir = r"/home/pi/sigray/logs"
+
     app.run_server()
