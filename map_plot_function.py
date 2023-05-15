@@ -16,7 +16,7 @@ def get_gps_radar_paths(base_path):
 
     while not gps_folder or not radar_folder:
         folders = os.listdir(base_path)
-        full_paths = [os.path.join(base_path, folder) for folder in folders]
+        full_paths = [os.path.join(base_path, folder) for folder in folders if os.path.isdir(os.path.join(base_path,folder))]
 
         for folder in full_paths:
             files = os.listdir(folder)
@@ -24,6 +24,7 @@ def get_gps_radar_paths(base_path):
                 files.sort()
                 try:
                     highest_file = os.path.join(folder, files[-2])
+                    print(highest_file)
                     if os.path.isfile(highest_file):
                         with open(highest_file, "rt", encoding='cp1252') as file:
                             for line in file:
@@ -51,19 +52,22 @@ def get_init_gps_position(gps_data_path):
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
+            try:
+                if 'GPGGA' in line.rstrip():
+                    msg = pynmea2.parse(line.split('$')[1])
+                    base_lat = np.radians(msg.latitude)  # Boat latitude
+                    base_long = np.radians(msg.longitude)  # Boat longitud
+                    GPGGA_stored = 1
 
-            if 'GPGGA' in line.rstrip():
-                msg = pynmea2.parse(line.split('$')[1])
-                base_lat = np.radians(msg.latitude)  # Boat latitude
-                base_long = np.radians(msg.longitude)  # Boat longitude
-                GPGGA_stored = 1
+                if 'GPHDT' in line.rstrip():
+                    msg = pynmea2.parse(line.split('$')[1])
+                    radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
 
-            if 'GPHDT' in line.rstrip():
-                msg = pynmea2.parse(line.split('$')[1])
-                radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
-
-                if GPGGA_stored == 1:
-                    break
+                    if GPGGA_stored == 1:
+                        break
+            except Exception as e:
+                print(e)
+                pass
 
         return base_lat, base_long, radar_bearing_from_north
 
@@ -83,6 +87,7 @@ def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long
 
         # Sort the files by name
         files.sort()
+        files.pop(files.index("complete_log.log"))
 
         # Get the second to last file (-2)
         highest_file = os.path.join(output_dir, files[-2])
@@ -178,11 +183,11 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
 
 
 log_path = r"/home/pi/sigray/logs"
-log_path = r"C:\Projects\sigray\logs\logs_20230512\log_path_Copy"
+#log_path = r"C:\Projects\sigray\logs\logs_20230512\log_path_Copy"
 gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
 init_zoom = 13
-interval_time = 1 * 1000  # milliseconds
+interval_time = 5 * 1000  # milliseconds
 
 nauticalMiles2meters = 1852 / 1000
 earth_radius = 3440.1  # Radius of Earth

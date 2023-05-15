@@ -1,44 +1,41 @@
 #!/bin/bash
 
-# Set the log file directory
-log_dir=/home/pi/sigray/logs
+# Set the log file directory and interval to create new files
+log_dir_0=/home/pi/sigray/logs/serial0
+log_dir_1=/home/pi/sigray/logs/serial1
+interval=5 # in seconds
 
 # Create log file names with timestamp
-filename_serial0="$log_dir/$(date +"%Y_%m_%d_%H_%M_%S").serial0.log"
-filename_serial1="$log_dir/$(date +"%Y_%m_%d_%H_%M_%S").serial1.log"
+filename_serial0="$log_dir_0/$(date +"%Y_%m_%d_%H_%M_%S").serial0.log"
+filename_serial1="$log_dir_1/$(date +"%Y_%m_%d_%H_%M_%S").serial1.log"
 
-# Initialize line counters
-line_count_serial0=0
-line_count_serial1=0
+# Read incoming data from serial0, add a timestamp, and write it to the log file
+cat /dev/ttyUSB0 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial0 &
+chmod 777 $filename_serial0
+
+# Read incoming data from serial1, add a timestamp, and write it to the log file
+cat /dev/ttyUSB1 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial1 &
+chmod 777 $filename_serial1
 
 # Loop indefinitely
 while true; do
-  # Check if line count has reached the maximum
-  if [ "$line_count_serial0" -ge 50 ]; then
-#    # Create a new log file for serial0
-    filename_serial0="$log_dir/$(date +"%Y_%m_%d_%H_%M_%S").serial0.log"
-    line_count_serial0=0
+  # Check if it's time to create new log files
+  if (( $(date +"%s") % $interval == 0 )); then
+    killall cat
+    
+    # Create new log file names with timestamp
+    filename_serial0="$log_dir_0/$(date +"%Y_%m_%d_%H_%M_%S").serial0.log"
+    filename_serial1="$log_dir_1/$(date +"%Y_%m_%d_%H_%M_%S").serial1.log"
+    
+    # Read incoming data from serial0, add a timestamp, and write it to the log file
+    cat /dev/ttyUSB0 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial0 &
+    chmod 777 $filename_serial0
+    
+    # Read incoming data from serial1, add a timestamp, and write it to the log file
+    cat /dev/ttyUSB1 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial1 &
+    chmod 777 $filename_serial1
+	
   fi
-
-#  if [ "$line_count_serial1" -ge 50 ]; then
-#    # Create a new log file for serial1
-#    filename_serial1="$log_dir/$(date +"%Y_%m_%d_%H_%M_%S").serial1.log"
-#    line_count_serial1=0
-#  fi
-
-  # Read incoming data from serial0, add a timestamp, and write it to the log file
-  #cat /dev/ttyUSB0 | ts '[%Y-%m-%d %H:%M:%.S]' | tee -a "$filename_serial0" | python -c "import sys; print(sys.stdin.read())" | parse_radar.py &
-  cat /dev/ttyUSB0 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial0 &
-  chmod 777 $filename_serial0
-  # Increment the line count for serial0
-  ((line_count_serial0++))
-
-  # Read incoming data from serial1, add a timestamp, and write it to the log file
-  #cat /dev/ttyUSB1 | ts '[%Y-%m-%d %H:%M:%.S]' | tee -a "$filename_serial1" | python -c "import sys; print(sys.stdin.read())" | parse_radar.py &
- # cat /dev/ttyUSB1 | ts '[%Y-%m-%d %H:%M:%.S]' >> $filename_serial1 &
- # sudo chmod 777 $filename_serial1
-  # Increment the line count for serial1
-  ((line_count_serial1++))
 
   # Sleep for 1 second before the next iteration
   sleep 1
