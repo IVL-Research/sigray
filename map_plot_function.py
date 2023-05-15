@@ -35,32 +35,38 @@ def get_gps_radar_paths(base_path):
                                     break
                 except IOError:
                     time.sleep(1)
-                    break
+
             else:
                 break
 
     return gps_folder, radar_folder
+
+
 def get_init_gps_position(gps_data_path):
     # TODO: Check folders, return serial0/1 to correct path and read gps pos
-    gps_serial_data = open(gps_data_path, "rt")
+    files = os.listdir(gps_data_path)
+    files.sort()
+    highest_file = os.path.join(gps_data_path, files[-2])
+    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
 
-    GPGGA_stored = 0
-    for line in reversed(list(gps_serial_data)):
+        GPGGA_stored = 0
+        for line in reversed(list(gps_serial_data)):
 
-        if 'GPGGA' in line.rstrip():
-            msg = pynmea2.parse(line.split('$')[1])
-            base_lat = np.radians(msg.latitude)  # Boat latitude
-            base_long = np.radians(msg.longitude)  # Boat longitude
-            GPGGA_stored = 1
+            if 'GPGGA' in line.rstrip():
+                msg = pynmea2.parse(line.split('$')[1])
+                base_lat = np.radians(msg.latitude)  # Boat latitude
+                base_long = np.radians(msg.longitude)  # Boat longitude
+                GPGGA_stored = 1
 
-        if 'GPHDT' in line.rstrip():
-            msg = pynmea2.parse(line.split('$')[1])
-            radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
+            if 'GPHDT' in line.rstrip():
+                msg = pynmea2.parse(line.split('$')[1])
+                radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
 
-            if GPGGA_stored == 1:
-                break
+                if GPGGA_stored == 1:
+                    break
 
-    return base_lat, base_long, radar_bearing_from_north
+        return base_lat, base_long, radar_bearing_from_north
+
 
 def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long):
 
@@ -100,7 +106,7 @@ def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long
 
             except Exception as e:
                 print(e)
-                print(f"at file {file} and line {line}")
+                print(f"at file {highest_file} and line {line}")
                 pass
 
         radar_serial_data.close()
@@ -172,6 +178,7 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
 
 
 log_path = r"/home/pi/sigray/logs"
+log_path = r"C:\Projects\sigray\logs\logs_20230512\log_path_Copy"
 gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
 init_zoom = 13
@@ -205,7 +212,6 @@ app.layout = html.Div([
               State('stored_targets_hist', 'data'))
 def update_map(n, old_targets, hist_targets):
     # Add new markers to the Folium map object
-    print("Enter")
     new_m, _ = create_map_object(init_zoom, base_lat, base_long)
     targets = get_data(radar_data_path, nauticalMiles2meters, earth_radius, base_lat, base_long)
 
