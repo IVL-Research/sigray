@@ -1,7 +1,7 @@
 import pynmea2
 import numpy as np
 import folium
-import sys
+import time
 
 # Dash
 import dash
@@ -9,22 +9,53 @@ from dash import dcc, html
 import os
 from dash.dependencies import Input, Output, State
 
+
+def get_gps_radar_paths(base_path):
+    gps_folder = ''
+    radar_folder = ''
+
+    while not gps_folder or not radar_folder:
+        folders = os.listdir(base_path)
+        full_paths = [os.path.join(base_path, folder) for folder in folders]
+
+        for folder in full_paths:
+            files = os.listdir(folder)
+            if len(files) > 1:
+                files.sort()
+                try:
+                    highest_file = os.path.join(folder, files[-2])
+                    if os.path.isfile(highest_file):
+                        with open(highest_file, "rt", encoding='cp1252') as file:
+                            for line in file:
+                                line = line.rstrip()
+                                if 'GPGGA' in line or 'GPHDT' in line:
+                                    gps_folder = folder
+                                    full_paths.pop(full_paths.index(gps_folder))
+                                    radar_folder = full_paths[0]
+                                    break
+                except IOError:
+                    time.sleep(1)
+                    break
+            else:
+                break
+
+    return gps_folder, radar_folder
 def get_init_gps_position(gps_data_path):
     # TODO: Check folders, return serial0/1 to correct path and read gps pos
-    GPS_serial_data = open(gps_data_path, "rt")
+    gps_serial_data = open(gps_data_path, "rt")
 
     GPGGA_stored = 0
-    for line in reversed(list(GPS_serial_data)):
+    for line in reversed(list(gps_serial_data)):
 
         if 'GPGGA' in line.rstrip():
-            msg2 = pynmea2.parse(line.split('$')[1])
-            base_lat = np.radians(msg2.latitude)  # Boat latitude
-            base_long = np.radians(msg2.longitude)  # Boat longitude
+            msg = pynmea2.parse(line.split('$')[1])
+            base_lat = np.radians(msg.latitude)  # Boat latitude
+            base_long = np.radians(msg.longitude)  # Boat longitude
             GPGGA_stored = 1
 
         if 'GPHDT' in line.rstrip():
-            msg3 = pynmea2.parse(line.split('$')[1])
-            radar_bearing_from_north = float(msg3.data[0]) * np.pi / (180)  # Radarns bäring mot norr
+            msg = pynmea2.parse(line.split('$')[1])
+            radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
 
             if GPGGA_stored == 1:
                 break
@@ -133,13 +164,11 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
         return False, None, None, None, None
 
 
-gps_data_path = r"/home/pi/sigray/logs/gps"
+log_path = r"/home/pi/sigray/logs"
+gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
 init_zoom = 13
 interval_time = 1 * 1000  # milliseconds
-
-radar_data_path = r"/home/pi/sigray/logs/radar"
-#output_dir = r"C:\Projects\sigray\logs\logs_20230512\logs"
 
 nauticalMiles2meters = 1852 / 1000
 earth_radius = 3440.1  # Radius of Earth
