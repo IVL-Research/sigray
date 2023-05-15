@@ -53,17 +53,24 @@ def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long
         radar_serial_data = open(highest_file, "rt", encoding='cp1252')
 
         for line in radar_serial_data:
-            line = line.replace('QQ5±', '$RATTM,')
-            if 'RATTM' in line:
-                msg = pynmea2.parse(line.split('$')[1])
-                status, ts, lat, long, target_nbr = get_target_data(msg, nauticalMiles2meters, earth_radius, base_lat,
-                                                                    base_long)
-                if status:
-                    target_list.append((target_nbr, lat, long))
+            try:
+                # Append the lines to the output file
+                with open(output_log, 'a') as f:
+                    f.writelines(line)
+                
+                line = line.split("] ")[1]
+                line = line.replace('QQ5±', '$RATTM,')
+                if line.startswith("$RATTM"):
+                    msg = pynmea2.parse(line)
+                    status, ts, lat, long, target_nbr = get_target_data(msg, nauticalMiles2meters, earth_radius, base_lat,
+                                                                        base_long)
+                    if status:
+                        target_list.append((target_nbr, lat, long))
 
-            # Append the lines to the output file
-            with open(output_log, 'a') as f:
-                f.writelines(line)
+            except Exception as e:
+                print(e)
+                print(f"at file {file} and line {line}")
+                pass
 
         radar_serial_data.close()
         os.remove(highest_file)
