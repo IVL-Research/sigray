@@ -10,6 +10,7 @@ from dash.dependencies import Input, Output, State
 
 
 def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long):
+
     # Create a output log file if not existing
     output_log = os.path.join(output_dir, 'complete_log.log')
     if not os.path.exists(output_log):
@@ -27,9 +28,10 @@ def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long
         # Get the second to last file (-2)
         highest_file = os.path.join(output_dir, files[-2])
 
-        radar_serial_data = open(highest_file, "rt")
+        radar_serial_data = open(highest_file, "rt", encoding='cp1252')
 
         for line in radar_serial_data:
+            line = line.replace('QQ5±', '$RATTM,')
             if 'RATTM' in line:
                 msg = pynmea2.parse(line.split('$')[1])
                 status, ts, lat, long, target_nbr = get_target_data(msg, nauticalMiles2meters, earth_radius, base_lat,
@@ -111,8 +113,7 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
 
 init_zoom = 14
 base_lat, base_long = (1.0061238452447892, 0.20680522662164277)
-output_dir = r"C:\Projects\sigray\test_logs"
-interval_time = 0.5 * 1000  # milliseconds
+interval_time = 10 * 1000  # milliseconds
 
 nauticalMiles2meters = 1852 / 1000
 earth_radius = 3440.1  # Radius of Earth
@@ -204,4 +205,5 @@ def update_map(n, old_targets, hist_targets):
 
 # Run the app
 if __name__ == '__main__':
+    output_dir = r"/home/pi/sigray/logs"
     app.run_server()
