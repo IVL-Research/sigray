@@ -24,7 +24,7 @@ def get_gps_radar_paths(base_path):
                 files.sort()
                 try:
                     highest_file = os.path.join(folder, files[-2])
-                    print(highest_file)
+                    #print(highest_file)
                     if os.path.isfile(highest_file):
                         with open(highest_file, "rt", encoding='cp1252') as file:
                             for line in file:
@@ -33,6 +33,7 @@ def get_gps_radar_paths(base_path):
                                     gps_folder = folder
                                     full_paths.pop(full_paths.index(gps_folder))
                                     radar_folder = full_paths[0]
+                                    print("GPS and radar serial port located!")
                                     break
                 except IOError:
                     time.sleep(1)
