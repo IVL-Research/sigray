@@ -61,7 +61,7 @@ def get_init_gps_position(gps_data_path):
 
                 if 'GPHDT' in line.rstrip():
                     msg = pynmea2.parse(line.split('$')[1])
-                    radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns bäring mot norr
+                    radar_bearing_from_north = float(msg.data[0]) * np.pi / (180)  # Radarns baring mot norr
 
                     if GPGGA_stored == 1:
                         break
