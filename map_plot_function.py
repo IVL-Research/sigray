@@ -56,8 +56,8 @@ def get_init_gps_position(gps_data_path):
             try:
                 if 'GPGGA' in line.rstrip():
                     msg = pynmea2.parse(line.split('$')[1])
-                    base_lat = np.radians(msg.latitude)  # Boat latitude
-                    base_long = np.radians(msg.longitude)  # Boat longitud
+                    base_lat = msg.latitude  # Boat latitude
+                    base_long = msg.longitude  # Boat longitud
                     GPGGA_stored = 1
 
                 if 'GPHDT' in line.rstrip():
@@ -73,7 +73,7 @@ def get_init_gps_position(gps_data_path):
         return base_lat, base_long, radar_bearing_from_north
 
 
-def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long):
+def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, base_long):
 
     # Create a output log file if not existing
     output_log = os.path.join(output_dir, 'complete_log.log')
@@ -105,7 +105,7 @@ def get_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, base_long
                 line = line.replace('QQ5±', '$RATTM,')
                 if line.startswith("$RATTM"):
                     msg = pynmea2.parse(line)
-                    status, ts, lat, long, target_nbr = get_target_data(msg, nauticalMiles2meters, earth_radius, base_lat,
+                    status, ts, lat, long, target_nbr = get_target_data(msg, nautical_miles_per_kilometer, earth_radius, base_lat,
                                                                         base_long)
                     if status:
                         target_list.append((target_nbr, lat, long))
@@ -125,7 +125,7 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     map_object = folium.Map([np.degrees(radar_init_lat), np.degrees(radar_init_long)], zoom_start=init_zoom,
                             tiles="cartodbpositron")
     folium.Marker(
-        location=[np.degrees(radar_init_lat), np.degrees(radar_init_long)],
+        location=[radar_init_lat, radar_init_long],
         popup="Boat radar",
     ).add_to(map_object)
     html_string = '''
@@ -158,25 +158,28 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     return map_object, map_name
 
 
-def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
+def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
     if (msg.status == 'T'):
 
         timestamps = msg.timestamp.replace(tzinfo=None)
 
         # Finding range for target
-        r = float(msg.distance) * nauticalMiles2meters
+        r = float(msg.distance) * nautical_miles_per_kilometer
 
         bearing_rad = np.radians(float(msg.bearing))
 
         # Coordinate calulcation
-        d = r / nauticalMiles2meters  # Distance to object (nautical miles)
+        d = r / nautical_miles_per_kilometer  # Distance to object (nautical miles)
 
         Ad = d / R  # Angular distance i.e d/R (nautical miles)
+
+        base_lat = np.radians(base_lat)  # rad
+        base_long = np.radians(base_long)  # rad
 
         tmp_la = np.degrees(
             np.arcsin(np.sin(base_lat) * np.cos(Ad) + np.cos(base_lat) * np.sin(Ad) * np.cos(bearing_rad)))
         tmp_lo = np.degrees(base_long + np.arctan2((np.sin(bearing_rad) * np.sin(Ad) * np.cos(base_lat)),
-                                                   (np.cos(Ad) - np.sin(base_lat) * np.sin(tmp_la))))
+                                                   (np.cos(Ad) - np.sin(base_lat) * np.sin(np.radians(tmp_la)))))
 
         return True, timestamps, tmp_la, tmp_lo, int(msg.target_number)
     else:
@@ -190,8 +193,8 @@ base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_p
 init_zoom = 13
 interval_time = 5 * 1000  # milliseconds
 
-nauticalMiles2meters = 1852 / 1000
-earth_radius = 3440.1  # Radius of Earth
+nautical_miles_per_kilometer = 1852 / 1000
+earth_radius = 6371  # Radius of Earth
 
 m, _ = create_map_object(init_zoom, base_lat, base_long)
 
@@ -219,7 +222,7 @@ app.layout = html.Div([
 def update_map(n, old_targets, hist_targets):
     # Add new markers to the Folium map object
     new_m, _ = create_map_object(init_zoom, base_lat, base_long)
-    targets = get_data(radar_data_path, nauticalMiles2meters, earth_radius, base_lat, base_long)
+    targets = get_data(radar_data_path, nautical_miles_per_kilometer, earth_radius, base_lat, base_long)
 
     # New targets
     for target in targets:
