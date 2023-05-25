@@ -2,13 +2,25 @@ import pynmea2
 import numpy as np
 import folium
 import time
-
-# Dash
 import dash
 from dash import dcc, html
 import os
 from dash.dependencies import Input, Output, State
+import chardet
 
+
+def detect_encoding(file_path):
+    with open(file_path, 'rb') as file:
+        raw_data = file.read()
+        result = chardet.detect(raw_data)
+        encoding = result['encoding']
+        if encoding == 'utf-8':
+            replacer = 'QQ5±'
+        else:
+            replacer = 'QQ5Â±'
+
+        print("Cofidence:", result['confidence'])
+        return encoding, replacer
 
 def get_gps_radar_paths(base_path):
     gps_folder = ''
@@ -24,9 +36,9 @@ def get_gps_radar_paths(base_path):
                 files.sort()
                 try:
                     highest_file = os.path.join(folder, files[-2])
-                    #print(highest_file)
                     if os.path.isfile(highest_file):
-                        with open(highest_file, "rt", encoding='cp1252') as file:
+                        encoding, _ = detect_encoding(highest_file)
+                        with open(highest_file, "rt", encoding=encoding) as file:
                             for line in file:
                                 line = line.rstrip()
                                 if 'GPGGA' in line or 'GPHDT' in line:
@@ -49,7 +61,8 @@ def get_init_gps_position(gps_data_path):
     files = os.listdir(gps_data_path)
     files.sort()
     highest_file = os.path.join(gps_data_path, files[-2])
-    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
+    encoding, _ = detect_encoding(highest_file)
+    with open(highest_file, "rt", encoding=encoding) as gps_serial_data:
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
@@ -92,8 +105,8 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
 
         # Get the second to last file (-2)
         highest_file = os.path.join(output_dir, files[-2])
-
-        radar_serial_data = open(highest_file, "rt", encoding='cp1252')
+        encoding, _ = detect_encoding(highest_file)
+        radar_serial_data = open(highest_file, "rt", encoding=encoding)
 
         for line in radar_serial_data:
             try:
