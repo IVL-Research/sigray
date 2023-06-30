@@ -3,6 +3,7 @@
 import pynmea2
 import numpy as np
 import folium
+import chardet
 
 # Dash
 import dash
