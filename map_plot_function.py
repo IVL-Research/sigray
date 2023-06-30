@@ -39,8 +39,7 @@ def get_gps_radar_paths(base_path):
                 try:
                     highest_file = os.path.join(folder, files[-2])
                     if os.path.isfile(highest_file):
-                        encoding, _ = detect_encoding(highest_file)
-                        with open(highest_file, "rt", encoding=encoding) as file:
+                        with open(highest_file, "rt", encoding='cp1252') as file:
                             for line in file:
                                 line = line.rstrip()
                                 if 'GPGGA' in line or 'GPHDT' in line:
@@ -63,16 +62,16 @@ def get_init_gps_position(gps_data_path):
     files = os.listdir(gps_data_path)
     files.sort()
     highest_file = os.path.join(gps_data_path, files[-2])
-    encoding, _ = detect_encoding(highest_file)
-    with open(highest_file, "rt", encoding=encoding) as gps_serial_data:
+    #encoding, _ = detect_encoding(highest_file)
+    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
             try:
                 if 'GPGGA' in line.rstrip():
                     msg = pynmea2.parse(line.split('$')[1])
-                    base_lat = msg.latitude  # Boat latitude
-                    base_long = msg.longitude  # Boat longitud
+                    base_lat = np.radians(msg.latitude)  # Boat latitude
+                    base_long = np.radians(msg.longitude)  # Boat longitud
                     GPGGA_stored = 1
 
                 if 'GPHDT' in line.rstrip():
@@ -107,8 +106,8 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
 
         # Get the second to last file (-2)
         highest_file = os.path.join(output_dir, files[-2])
-        encoding, replacer = detect_encoding(highest_file)
-        radar_serial_data = open(highest_file, "rt", encoding=encoding)
+        #encoding, replacer = detect_encoding(highest_file)
+        radar_serial_data = open(highest_file, "rt", encoding='cp1252')
 
         for line in radar_serial_data:
             try:
@@ -117,7 +116,7 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
                     f.writelines(line)
                 
                 line = line.split("] ")[1]
-                line = line.replace(replacer, '$RATTM,')
+                line = line.replace('QQ5Â±', '$RATTM,')
                 if line.startswith("$RATTM"):
                     msg = pynmea2.parse(line)
                     status, ts, lat, long, target_nbr = get_target_data(msg, nautical_miles_per_kilometer, earth_radius, base_lat,
@@ -131,7 +130,7 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
                 pass
 
         radar_serial_data.close()
-        os.remove(highest_file)
+        #os.remove(highest_file)
 
     return target_list
 
@@ -140,7 +139,7 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     map_object = folium.Map([np.degrees(radar_init_lat), np.degrees(radar_init_long)], zoom_start=init_zoom,
                             tiles="cartodbpositron")
     folium.Marker(
-        location=[radar_init_lat, radar_init_long],
+        location=[np.degrees(radar_init_lat), np.degrees(radar_init_long)],
         popup="Boat radar",
     ).add_to(map_object)
     html_string = '''
@@ -188,9 +187,6 @@ def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
 
         Ad = d / R  # Angular distance i.e d/R (nautical miles)
 
-        base_lat = np.radians(base_lat)  # rad
-        base_long = np.radians(base_long)  # rad
-
         tmp_la = np.degrees(
             np.arcsin(np.sin(base_lat) * np.cos(Ad) + np.cos(base_lat) * np.sin(Ad) * np.cos(bearing_rad)))
         tmp_lo = np.degrees(base_long + np.arctan2((np.sin(bearing_rad) * np.sin(Ad) * np.cos(base_lat)),
@@ -202,14 +198,14 @@ def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
 
 
 log_path = r"/home/pi/sigray/logs"
-#log_path = r"C:\Projects\sigray\logs\logs_20230512\log_path_Copy"
+log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_13_30\logs"
 gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
 init_zoom = 13
 interval_time = 5 * 1000  # milliseconds
 
 nautical_miles_per_kilometer = 1852 / 1000
-earth_radius = 6371  # Radius of Earth
+earth_radius = 3440.1  # Radius of Earth
 
 m, _ = create_map_object(init_zoom, base_lat, base_long)
 
