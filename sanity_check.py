@@ -4,6 +4,7 @@ import pynmea2
 import numpy as np
 import folium
 import chardet
+import time
 
 # Dash
 import dash
@@ -57,6 +58,7 @@ def get_gps_radar_paths(base_path):
     while not gps_folder or not radar_folder:
         folders = os.listdir(base_path)
         full_paths = [os.path.join(base_path, folder) for folder in folders if os.path.isdir(os.path.join(base_path,folder))]
+        print(folders, full_paths)
 
         for folder in full_paths:
             files = os.listdir(folder)
@@ -94,7 +96,7 @@ def detect_encoding(file_path):
         else:
             replacer = 'QQ5Â±'
 
-        print("Cofidence:", result['confidence'])
+        #print("Cofidence:", result['confidence'])
         return encoding, replacer
 
 
