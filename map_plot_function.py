@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pynmea2
 import numpy as np
 import folium
@@ -105,7 +107,7 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
 
         # Get the second to last file (-2)
         highest_file = os.path.join(output_dir, files[-2])
-        encoding, _ = detect_encoding(highest_file)
+        encoding, replacer = detect_encoding(highest_file)
         radar_serial_data = open(highest_file, "rt", encoding=encoding)
 
         for line in radar_serial_data:
@@ -115,7 +117,7 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
                     f.writelines(line)
                 
                 line = line.split("] ")[1]
-                line = line.replace('QQ5±', '$RATTM,')
+                line = line.replace(replacer, '$RATTM,')
                 if line.startswith("$RATTM"):
                     msg = pynmea2.parse(line)
                     status, ts, lat, long, target_nbr = get_target_data(msg, nautical_miles_per_kilometer, earth_radius, base_lat,

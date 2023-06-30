@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pynmea2
 import numpy as np
 import folium
@@ -21,7 +23,7 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     <!doctype html>
     <html>
     <head>
-        <meta charset="utf-8">
+        <meta charset="utf-8">  
         <title>Map</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
