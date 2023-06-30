@@ -123,7 +123,9 @@ def test_read_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, bas
                                                                         base_long)
                     if status:
                         target_list.append((target_nbr, lat, long))
-                    print(f"file: {file}, status: {status}, target: {target_nbr}, lat: {lat}, long: {long}")
+
+                    #print(f"file: {file}, status: {status}, target: {target_nbr}, lat: {lat}, long: {long}")
+
             except Exception as e:
                 print(file)
                 print(line)
