@@ -61,15 +61,20 @@ def get_gps_radar_paths(base_path):
 
         for folder in full_paths:
             files = os.listdir(folder)
-            print("FOLDER:", folder, "FILES: ", files)
+            #print("\nFOLDER:", folder, "FILES: ", files)
             if len(files) > 1:
                 files.sort()
+                print("\nSortingFiles")
                 try:
                     highest_file = os.path.join(folder, files[-2])
+                    print("\HighestFile: ", highest_file)
                     if os.path.isfile(highest_file):
-                        encoding, _ = detect_encoding(highest_file)
-                        with open(highest_file, "rt", encoding=encoding) as file:
+                        #encoding, _ = detect_encoding(highest_file)
+                        
+                        with open(highest_file, "rt", encoding='cp1252') as file:
+                        #with open(highest_file, "rt", encoding=encoding) as file:
                             for line in file:
+                                print("\line:", line)
                                 line = line.rstrip()
                                 if 'GPGGA' in line or 'GPHDT' in line:
                                     gps_folder = folder
@@ -107,11 +112,15 @@ def test_read_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, bas
 
     # Sort the files by name
     files.sort()
-    files.pop(files.index("complete_log.log"))
+    try:
+        files.pop(files.index("complete_log.log"))
+    except:
+        print("No complete log to see here .... tard")
+        pass
     
     target_list = []
     for file in files:
-        encoding, replacer = detect_encoding(file)
+        #encoding, replacer = detect_encoding(file)
         radar_serial_data = open(os.path.join(output_dir,file), "rt", encoding=encoding)
 #        print(radar_serial_data)
         for line in radar_serial_data:
@@ -139,12 +148,12 @@ def test_read_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, bas
 
 
 def get_init_gps_position(gps_data_path):
-    # TODO: Check folders, return serial0/1 to correct path and read gps pos
+    # TODO: Check folders, return serial0/1 tos correct path and read gps pos
     files = os.listdir(gps_data_path)
     files.sort()
     highest_file = os.path.join(gps_data_path, files[-2])
-    encoding, _ = detect_encoding(highest_file)
-    with open(highest_file, "rt", encoding=encoding) as gps_serial_data:
+    #encoding, _ = detect_encoding(highest_file)
+    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
@@ -197,7 +206,7 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
         return False, None, None, None, None
 
 
-log_path = r"/home/pi/sigray/logs"
+log_path = r"/home/pi/sigray/old_slask"
 #log_path = r"C:\Projects\sigray\logs\logs_20230512\log_path_Copy"
 gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
