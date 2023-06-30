@@ -109,6 +109,7 @@ def test_read_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, bas
 
     # Get a list of all the files in the output directory
     files = os.listdir(output_dir)
+    replacer = 'QQ5Â±'
 
     # Sort the files by name
     files.sort()
@@ -121,7 +122,7 @@ def test_read_data(output_dir, nauticalMiles2meters, earth_radius, base_lat, bas
     target_list = []
     for file in files:
         #encoding, replacer = detect_encoding(file)
-        radar_serial_data = open(os.path.join(output_dir,file), "rt", encoding=encoding)
+        radar_serial_data = open(os.path.join(output_dir,file), "rt", encoding='cp1252')
 #        print(radar_serial_data)
         for line in radar_serial_data:
             try:
