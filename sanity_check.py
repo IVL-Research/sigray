@@ -58,10 +58,10 @@ def get_gps_radar_paths(base_path):
     while not gps_folder or not radar_folder:
         folders = os.listdir(base_path)
         full_paths = [os.path.join(base_path, folder) for folder in folders if os.path.isdir(os.path.join(base_path,folder))]
-        print(folders, full_paths)
 
         for folder in full_paths:
             files = os.listdir(folder)
+            print("FOLDER:", folder, "FILES: ", files)
             if len(files) > 1:
                 files.sort()
                 try:
