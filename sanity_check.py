@@ -12,7 +12,7 @@ from dash.dependencies import Input, Output, State
 
 
 log_path = r"/home/pi/sigray/logs"
-log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_11_30\logs"
+#log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_11_30\logs"
 init_zoom = 14
 interval_time = 2 * 1000  # milliseconds
 nautical_miles_per_kilometer = 1852 / 1000
