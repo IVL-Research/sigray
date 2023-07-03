@@ -2,6 +2,7 @@ import pynmea2
 import numpy as np
 import folium
 import time
+import datetime
 
 # Dash
 import dash
@@ -162,6 +163,27 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     map_name = 'map.html'
     folium_map.save(map_name)
     return map_object, map_name
+
+
+def create_archive_logging(logging_path, radar_path, gps_path):
+    # Check base directory and create if now created
+    base_path = os.path.join(os.path.dirname(logging_path) + r'\archive_logs')
+    if not os.path.isdir(base_path):
+        os.mkdir(base_path)
+
+    # Create datetime directory
+    timestamp = datetime.datetime.now()
+    timestamp = timestamp.strftime("%Y_%m_%d-%H_%M_%S")
+    archive_path = os.path.join(base_path, timestamp)
+    os.mkdir(archive_path)
+
+    # Create radar and gps paths
+    radar_archive_path = os.path.join(archive_path, os.path.basename(radar_path))
+    gps_archive_path = os.path.join(archive_path, os.path.basename(gps_path))
+    os.mkdir(radar_archive_path)
+    os.mkdir(gps_archive_path)
+
+    return radar_archive_path, gps_archive_path
 
 
 def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
