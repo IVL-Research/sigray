@@ -22,20 +22,21 @@ def get_gps_radar_paths(base_path):
         for folder in full_paths:
             files = os.listdir(folder)
             if len(files) > 1:
-                files.sort()
+                files.sort(reverse=True)
                 try:
-                    highest_file = os.path.join(folder, files[-2])
-                    # print(highest_file)
-                    if os.path.isfile(highest_file):
-                        with open(highest_file, "rt", encoding='cp1252') as file:
-                            for line in file:
-                                line = line.rstrip()
-                                if 'GPGGA' in line or 'GPHDT' in line:
-                                    gps_folder = folder
-                                    full_paths.pop(full_paths.index(gps_folder))
-                                    radar_folder = full_paths[0]
-                                    print("GPS and radar serial port located!")
-                                    break
+                    for file1 in files:
+                        highest_file = os.path.join(folder, file1)
+                        print(highest_file)
+                        if os.path.isfile(highest_file):
+                            with open(highest_file, "rt", encoding='cp1252') as file:
+                                for line in file:
+                                    line = line.rstrip()
+                                    if 'GPGGA' in line or 'GPHDT' in line:
+                                        gps_folder = folder
+                                        full_paths.pop(full_paths.index(gps_folder))
+                                        radar_folder = full_paths[0]
+                                        print("GPS and radar serial port located!")
+                                        break
                 except IOError:
                     time.sleep(1)
 
@@ -185,8 +186,8 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
         return False, None, None, None, None
 
 
-#log_path = r"/home/pi/sigray/logs"
-log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_11_30\logs"
+log_path = r"/home/pi/sigray/logs"
+#log_path = r"C:\Users\jens3109\Downloads\2023_05_16_13_30\logs"
 gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
 init_zoom = 13
