@@ -34,6 +34,7 @@ def get_gps_radar_paths(base_path):
                                         line = line.rstrip()
                                         if 'GPGGA' in line or 'GPHDT' in line:
                                             gps_folder = folder
+                                            print(full_paths)
                                             full_paths.pop(full_paths.index(gps_folder))
                                             radar_folder = full_paths[0]
                                             print("GPS and radar serial port located!")
