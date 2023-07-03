@@ -3,6 +3,7 @@ import pynmea2
 import numpy as np
 import folium
 import time
+import datetime
 import dash
 from dash import dcc, html
 import os
@@ -12,7 +13,7 @@ import chardet
 
 log_path = r"/home/pi/sigray/logs"
 log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_13_30\logs"
-init_zoom = 13
+init_zoom = 14
 interval_time = 5 * 1000  # milliseconds
 nautical_miles_per_kilometer = 1852 / 1000
 earth_radius = 3440.1
@@ -20,9 +21,9 @@ earth_radius = 3440.1
 #encoding = "utf-8"
 encoding = "cp1252"
 if encoding == "cp1252":
-    to_replace = 'QQ5Â±'
-else:
     to_replace = 'QQ5±'
+else:
+    to_replace = 'QQ5Â±'
 
 
 def get_gps_radar_paths():
@@ -39,8 +40,8 @@ def get_gps_radar_paths():
                 files = os.listdir(folder)
                 if len(files) > 1:
                     files.sort(reverse=True)
-                    try:
-                        for file1 in files:
+                    for file1 in files:
+                        try:
                             highest_file = os.path.join(folder, file1)
                             #print(highest_file)
                             if os.path.isfile(highest_file):
@@ -58,8 +59,9 @@ def get_gps_radar_paths():
                             if located:
                                 base_lat, base_long, radar_bearing_from_north = get_init_gps_position(highest_file)
                                 break
-                    except IOError:
-                        time.sleep(1)
+                        except Exception as e:
+                            print("Error in {filename}:".format(filename=file1), e)
+                            time.sleep(1)
 
             else:
                 break
@@ -94,8 +96,6 @@ def get_init_gps_position(gps_data_path):
 
 
 def get_data():
-
-
     # Get a list of all the files in the output directory
     files = os.listdir(radar_data_path)
     files_gps = os.listdir(gps_data_path)
@@ -107,32 +107,34 @@ def get_data():
 
         # Get the second to last file (-2)
         highest_file_radar = os.path.join(radar_data_path, files[-2])
-        radar_serial_data = open(highest_file, "rt", encoding=encoding)
+        radar_serial_data = open(highest_file_radar, "rt", encoding=encoding)
+        line = ''
+        try:
+            for line in radar_serial_data:
 
-        for line in radar_serial_data:
-            try:
-                line = line.split("] ")[1]
-                line = line.replace(to_replace, '$RATTM,')
-                if line.startswith("$RATTM"):
-                    msg = pynmea2.parse(line)
-                    status, ts, lat, long, target_nbr = get_target_data(msg)
-                    if status:
-                        target_list.append((target_nbr, lat, long))
+                    line = line.split("] ")[1]
+                    line = line.replace(to_replace, '$RATTM,')
+                    if line.startswith("$RATTM"):
+                        msg = pynmea2.parse(line)
+                        status, ts, lat, long, target_nbr = get_target_data(msg)
+                        if status:
+                            target_list.append((target_nbr, lat, long))
 
-            except Exception as e:
-                print(e)
-                print(f"at file {highest_file} and line {line}")
-                pass
+        except Exception as e:
+            print(e)
+            print(f"at file {highest_file_radar} and line {line}")
+            pass
 
         radar_serial_data.close()
 
-        os.rename(highest_file, os.path.join(radar_archive_path, files[-2]))
+        os.rename(highest_file_radar, os.path.join(radar_archive_path, files[-2]))
+    else:
+        print("No more data to process")
 
     if len(files_gps) >= 2:
         highest_file_gps = os.path.join(gps_data_path, files_gps[-2])
         # move gps file to archive
         os.rename(highest_file_gps, os.path.join(gps_archive_path, files_gps[-2]))
-
 
     return target_list
 
