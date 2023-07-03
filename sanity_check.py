@@ -13,7 +13,7 @@ from dash.dependencies import Input, Output, State
 def get_gps_radar_paths(base_path):
     gps_folder = ''
     radar_folder = ''
-
+    located = 0
     while not gps_folder or not radar_folder:
         folders = os.listdir(base_path)
         full_paths = [os.path.join(base_path, folder) for folder in folders if
@@ -38,7 +38,10 @@ def get_gps_radar_paths(base_path):
                                             full_paths.pop(full_paths.index(gps_folder))
                                             radar_folder = full_paths[0]
                                             print("GPS and radar serial port located!")
+                                            located = 1
                                             break
+                            if located:
+                                break
                     except IOError:
                         time.sleep(1)
 
