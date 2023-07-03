@@ -192,7 +192,7 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
 log_path = r"/home/pi/sigray/logs"
 #log_path = r"C:\Users\jens3109\Downloads\2023_05_16_13_30\logs"
 radar_data_path, base_lat, base_long, radar_bearing_from_north = get_gps_radar_paths(log_path)
-print(radar_data_path, base_lat, base_long, radar_bearing_from_north)
+print(radar_data_path, np.degrees(base_lat), np.degrees(base_long), radar_bearing_from_north)
 init_zoom = 13
 interval_time = 10 * 1000  # milliseconds
 nauticalMiles2meters = 1852 / 1000
