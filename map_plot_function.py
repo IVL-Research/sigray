@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import pynmea2
 import numpy as np
@@ -11,59 +10,66 @@ from dash.dependencies import Input, Output, State
 import chardet
 
 
-def detect_encoding(file_path):
-    with open(file_path, 'rb') as file:
-        raw_data = file.read()
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
-        if encoding == 'utf-8':
-            replacer = 'QQ5±'
-        else:
-            replacer = 'QQ5Â±'
+log_path = r"/home/pi/sigray/logs"
+log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_13_30\logs"
+init_zoom = 13
+interval_time = 5 * 1000  # milliseconds
+nautical_miles_per_kilometer = 1852 / 1000
+earth_radius = 3440.1
 
-        print("Cofidence:", result['confidence'])
-        return encoding, replacer
+#encoding = "utf-8"
+encoding = "cp1252"
+if encoding == "cp1252":
+    to_replace = 'QQ5Â±'
+else:
+    to_replace = 'QQ5±'
 
-def get_gps_radar_paths(base_path):
-    gps_folder = ''
-    radar_folder = ''
 
-    while not gps_folder or not radar_folder:
-        folders = os.listdir(base_path)
-        full_paths = [os.path.join(base_path, folder) for folder in folders if os.path.isdir(os.path.join(base_path,folder))]
+def get_gps_radar_paths():
+    gps_data_path = ''
+    radar_data_path = ''
+    located = 0
+    while not gps_data_path or not radar_data_path:
+        folders = os.listdir(log_path)
+        full_paths = [os.path.join(log_path, folder) for folder in folders if
+                      os.path.isdir(os.path.join(log_path, folder))]
 
         for folder in full_paths:
-            files = os.listdir(folder)
-            if len(files) > 1:
-                files.sort()
-                try:
-                    highest_file = os.path.join(folder, files[-2])
-                    if os.path.isfile(highest_file):
-                        with open(highest_file, "rt", encoding='cp1252') as file:
-                            for line in file:
-                                line = line.rstrip()
-                                if 'GPGGA' in line or 'GPHDT' in line:
-                                    gps_folder = folder
-                                    full_paths.pop(full_paths.index(gps_folder))
-                                    radar_folder = full_paths[0]
-                                    print("GPS and radar serial port located!")
-                                    break
-                except IOError:
-                    time.sleep(1)
+            if not gps_data_path or not radar_data_path:
+                files = os.listdir(folder)
+                if len(files) > 1:
+                    files.sort(reverse=True)
+                    try:
+                        for file1 in files:
+                            highest_file = os.path.join(folder, file1)
+                            #print(highest_file)
+                            if os.path.isfile(highest_file):
+                                with open(highest_file, "rt", encoding=encoding) as file:
+                                    for line in file:
+                                        line = line.rstrip()
+                                        if 'GPGGA' in line or 'GPHDT' in line:
+                                            gps_data_path = folder
+                                            #print(full_paths)
+                                            full_paths.pop(full_paths.index(gps_data_path))
+                                            radar_data_path = full_paths[0]
+                                            print("GPS and radar serial port located!")
+                                            located = 1
+                                            break
+                            if located:
+                                base_lat, base_long, radar_bearing_from_north = get_init_gps_position(highest_file)
+                                break
+                    except IOError:
+                        time.sleep(1)
 
             else:
                 break
 
-    return gps_folder, radar_folder
+    return radar_data_path, gps_data_path, base_lat, base_long, radar_bearing_from_north
 
 
 def get_init_gps_position(gps_data_path):
-    # TODO: Check folders, return serial0/1 to correct path and read gps pos
-    files = os.listdir(gps_data_path)
-    files.sort()
-    highest_file = os.path.join(gps_data_path, files[-2])
-    #encoding, _ = detect_encoding(highest_file)
-    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
+
+    with open(gps_data_path, "rt", encoding=encoding) as gps_serial_data:
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
@@ -87,40 +93,29 @@ def get_init_gps_position(gps_data_path):
         return base_lat, base_long, radar_bearing_from_north
 
 
-def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, base_long):
+def get_data():
 
-    # Create a output log file if not existing
-    output_log = os.path.join(output_dir, 'complete_log.log')
-    if not os.path.exists(output_log):
-        with open(output_log, 'w') as f:
-            pass
 
     # Get a list of all the files in the output directory
-    files = os.listdir(output_dir)
+    files = os.listdir(radar_data_path)
+    files_gps = os.listdir(gps_data_path)
+
     target_list = []
     if len(files) >= 2:
-
         # Sort the files by name
         files.sort()
-        files.pop(files.index("complete_log.log"))
 
         # Get the second to last file (-2)
-        highest_file = os.path.join(output_dir, files[-2])
-        #encoding, replacer = detect_encoding(highest_file)
-        radar_serial_data = open(highest_file, "rt", encoding='cp1252')
+        highest_file_radar = os.path.join(radar_data_path, files[-2])
+        radar_serial_data = open(highest_file, "rt", encoding=encoding)
 
         for line in radar_serial_data:
             try:
-                # Append the lines to the output file
-                with open(output_log, 'a') as f:
-                    f.writelines(line)
-                
                 line = line.split("] ")[1]
-                line = line.replace('QQ5Â±', '$RATTM,')
+                line = line.replace(to_replace, '$RATTM,')
                 if line.startswith("$RATTM"):
                     msg = pynmea2.parse(line)
-                    status, ts, lat, long, target_nbr = get_target_data(msg, nautical_miles_per_kilometer, earth_radius, base_lat,
-                                                                        base_long)
+                    status, ts, lat, long, target_nbr = get_target_data(msg)
                     if status:
                         target_list.append((target_nbr, lat, long))
 
@@ -130,7 +125,14 @@ def get_data(output_dir, nautical_miles_per_kilometer, earth_radius, base_lat, b
                 pass
 
         radar_serial_data.close()
-        #os.remove(highest_file)
+
+        os.rename(highest_file, os.path.join(radar_archive_path, files[-2]))
+
+    if len(files_gps) >= 2:
+        highest_file_gps = os.path.join(gps_data_path, files_gps[-2])
+        # move gps file to archive
+        os.rename(highest_file_gps, os.path.join(gps_archive_path, files_gps[-2]))
+
 
     return target_list
 
@@ -172,7 +174,28 @@ def create_map_object(init_zoom, radar_init_lat, radar_init_long):
     return map_object, map_name
 
 
-def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
+def create_archive_logging():
+    # Check base directory and create if now created
+    base_path = os.path.join(os.path.dirname(log_path), 'archive_logs')
+    if not os.path.isdir(base_path):
+        os.mkdir(base_path)
+
+    # Create datetime directory
+    timestamp = datetime.datetime.now()
+    timestamp = timestamp.strftime("%Y_%m_%d-%H_%M_%S")
+    archive_path = os.path.join(base_path, timestamp)
+    os.mkdir(archive_path)
+
+    # Create radar and gps paths
+    radar_archive_path = os.path.join(archive_path, os.path.basename(radar_data_path))
+    gps_archive_path = os.path.join(archive_path, os.path.basename(gps_data_path))
+    os.mkdir(radar_archive_path)
+    os.mkdir(gps_archive_path)
+
+    return radar_archive_path, gps_archive_path
+
+
+def get_target_data(msg):
     if (msg.status == 'T'):
 
         timestamps = msg.timestamp.replace(tzinfo=None)
@@ -185,7 +208,7 @@ def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
         # Coordinate calulcation
         d = r / nautical_miles_per_kilometer  # Distance to object (nautical miles)
 
-        Ad = d / R  # Angular distance i.e d/R (nautical miles)
+        Ad = d / earth_radius  # Angular distance i.e d/R (nautical miles)
 
         tmp_la = np.degrees(
             np.arcsin(np.sin(base_lat) * np.cos(Ad) + np.cos(base_lat) * np.sin(Ad) * np.cos(bearing_rad)))
@@ -196,17 +219,8 @@ def get_target_data(msg, nautical_miles_per_kilometer, R, base_lat, base_long):
     else:
         return False, None, None, None, None
 
-
-log_path = r"/home/pi/sigray/logs"
-log_path = r"C:\Users\elias4318\OneDrive - IVL Svenska Miljöinstitutet AB\Skrivbordet\2023_05_16_13_30\logs"
-gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
-base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
-init_zoom = 13
-interval_time = 5 * 1000  # milliseconds
-
-nautical_miles_per_kilometer = 1852 / 1000
-earth_radius = 3440.1  # Radius of Earth
-
+radar_data_path, gps_data_path, base_lat, base_long, radar_bearing_from_north = get_gps_radar_paths()
+radar_archive_path, gps_archive_path = create_archive_logging()
 m, _ = create_map_object(init_zoom, base_lat, base_long)
 
 # Create a Dash app
@@ -233,7 +247,7 @@ app.layout = html.Div([
 def update_map(n, old_targets, hist_targets):
     # Add new markers to the Folium map object
     new_m, _ = create_map_object(init_zoom, base_lat, base_long)
-    targets = get_data(radar_data_path, nautical_miles_per_kilometer, earth_radius, base_lat, base_long)
+    targets = get_data()
 
     # New targets
     for target in targets:
