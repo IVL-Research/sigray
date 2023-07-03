@@ -20,25 +20,26 @@ def get_gps_radar_paths(base_path):
                       os.path.isdir(os.path.join(base_path, folder))]
 
         for folder in full_paths:
-            files = os.listdir(folder)
-            if len(files) > 1:
-                files.sort(reverse=True)
-                try:
-                    for file1 in files:
-                        highest_file = os.path.join(folder, file1)
-                        print(highest_file)
-                        if os.path.isfile(highest_file):
-                            with open(highest_file, "rt", encoding='cp1252') as file:
-                                for line in file:
-                                    line = line.rstrip()
-                                    if 'GPGGA' in line or 'GPHDT' in line:
-                                        gps_folder = folder
-                                        full_paths.pop(full_paths.index(gps_folder))
-                                        radar_folder = full_paths[0]
-                                        print("GPS and radar serial port located!")
-                                        break
-                except IOError:
-                    time.sleep(1)
+            if not gps_folder or not radar_folder:
+                files = os.listdir(folder)
+                if len(files) > 1:
+                    files.sort(reverse=True)
+                    try:
+                        for file1 in files:
+                            highest_file = os.path.join(folder, file1)
+                            print(highest_file)
+                            if os.path.isfile(highest_file):
+                                with open(highest_file, "rt", encoding='cp1252') as file:
+                                    for line in file:
+                                        line = line.rstrip()
+                                        if 'GPGGA' in line or 'GPHDT' in line:
+                                            gps_folder = folder
+                                            full_paths.pop(full_paths.index(gps_folder))
+                                            radar_folder = full_paths[0]
+                                            print("GPS and radar serial port located!")
+                                            break
+                    except IOError:
+                        time.sleep(1)
 
             else:
                 break
