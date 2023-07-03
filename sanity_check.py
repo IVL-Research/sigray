@@ -27,20 +27,21 @@ def get_gps_radar_paths(base_path):
                     try:
                         for file1 in files:
                             highest_file = os.path.join(folder, file1)
-                            print(highest_file)
+                            #print(highest_file)
                             if os.path.isfile(highest_file):
                                 with open(highest_file, "rt", encoding='cp1252') as file:
                                     for line in file:
                                         line = line.rstrip()
                                         if 'GPGGA' in line or 'GPHDT' in line:
                                             gps_folder = folder
-                                            print(full_paths)
+                                            #print(full_paths)
                                             full_paths.pop(full_paths.index(gps_folder))
                                             radar_folder = full_paths[0]
                                             print("GPS and radar serial port located!")
                                             located = 1
                                             break
                             if located:
+                                base_lat, base_long, radar_bearing_from_north = get_init_gps_position(highest_file)
                                 break
                     except IOError:
                         time.sleep(1)
@@ -48,15 +49,12 @@ def get_gps_radar_paths(base_path):
             else:
                 break
 
-    return gps_folder, radar_folder
+    return radar_folder, base_lat, base_long, radar_bearing_from_north
 
 
 def get_init_gps_position(gps_data_path):
-    # TODO: Check folders, return serial0/1 to correct path and read gps pos
-    files = os.listdir(gps_data_path)
-    files.sort()
-    highest_file = os.path.join(gps_data_path, files[-2])
-    with open(highest_file, "rt", encoding='cp1252') as gps_serial_data:
+
+    with open(gps_data_path, "rt", encoding='cp1252') as gps_serial_data:
 
         GPGGA_stored = 0
         for line in reversed(list(gps_serial_data)):
@@ -193,11 +191,10 @@ def get_target_data(msg, nauticalMiles2meters, R, base_lat, base_long):
 
 log_path = r"/home/pi/sigray/logs"
 #log_path = r"C:\Users\jens3109\Downloads\2023_05_16_13_30\logs"
-gps_data_path, radar_data_path = get_gps_radar_paths(log_path)
-base_lat, base_long, radar_bearing_from_north = get_init_gps_position(gps_data_path)
+radar_data_path, base_lat, base_long, radar_bearing_from_north = get_gps_radar_paths(log_path)
+print(radar_data_path, base_lat, base_long, radar_bearing_from_north)
 init_zoom = 13
 interval_time = 10 * 1000  # milliseconds
-
 nauticalMiles2meters = 1852 / 1000
 earth_radius = 3440.1  # Radius of Earth in nautic miles
 
